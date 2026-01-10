@@ -1,0 +1,27 @@
+pihole:
+  replicaCount: 1
+
+  nodeSelector:
+    node-role: control-plane
+
+  persistentVolumeClaim:
+    enabled: true
+
+  admin:
+    existingSecret: pihole-admin
+    passwordKey: password
+
+  DNS1: "8.8.8.8"
+  DNS2: "8.8.4.4"
+
+  serviceDns:
+    type: LoadBalancer
+
+  serviceWeb:
+    type: ClusterIP
+
+  ingress:
+    enabled: true
+    ingressClassName: traefik
+    hosts:
+      - pihole.home

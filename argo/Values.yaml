@@ -1,0 +1,16 @@
+global:
+  nodeSelector:
+    node-role: control-plane
+
+configs:
+  params:
+    server.insecure: true
+
+server:
+  ingress:
+    enabled: true
+    hostname: argo.home
+    ingressClassName: traefik
+  service:
+    type: ClusterIP
+    servicePortHttp: 80
