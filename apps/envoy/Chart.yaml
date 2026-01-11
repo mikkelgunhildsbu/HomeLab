@@ -2,6 +2,11 @@ apiVersion: v2
 name: envoy-gateway
 version: 1.0.0
 dependencies:
+  - name: gateway-crds-helm
+    version: v1.6.1
+    repository: oci://docker.io/envoyproxy
   - name: gateway-helm
     version: v1.6.1
     repository: oci://docker.io/envoyproxy
+  
+  
