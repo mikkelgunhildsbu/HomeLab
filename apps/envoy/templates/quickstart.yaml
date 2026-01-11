@@ -16,5 +16,8 @@ spec:
     - name: http
       protocol: HTTP
       port: 8080
+      allowedRoutes:
+        namespaces:
+          from: All
 
 
