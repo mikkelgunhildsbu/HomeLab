@@ -1,11 +1,6 @@
 global:
   nodeSelector:
     node-role: control-plane
-
-configs:
-  params:
-    server.insecure: true
-
 server:
   ingress:
     enabled: true
