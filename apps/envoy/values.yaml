@@ -5,4 +5,7 @@ gateway-crds-helm:
       channel: standard
     envoyGateway:
       enabled: true
+gateway-helm:
+  crds:
+    enabled: false
 
