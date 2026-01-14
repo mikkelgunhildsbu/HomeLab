@@ -205,24 +205,25 @@ data:
       profilePictureUrl: https://dgalywyr863hv.cloudfront.net/pictures/athletes/101757310/24662245/2/large.jpg
       athlete:
         birthday: '2000-05-25'
-        maxHeartRateFormula: 'fox'
+        maxHeartRateFormula:
+          "2025-01-01": 208
         heartRateZones:
           mode: relative
           default:
             zone1:
-              from: 50
-              to: 60
+              from: 55
+              to: 71
             zone2:
-              from: 61
-              to: 70
+              from: 72
+              to: 81
             zone3:
-              from: 71
-              to: 80
+              from: 82
+              to: 86
             zone4:
-              from: 81
-              to: 90
+              from: 87
+              to: 91
             zone5:
-              from: 91
+              from: 92
               to: null
         weightHistory:
           "2000-05-25": 70
