@@ -13,7 +13,8 @@ spec:
       labels:
         app: stats-for-strava
     spec:
-      # No securityContext - run as root to write to /var/www/public/manifest.json
+      nodeSelector:
+        node-role: control-plane
       initContainers:
         - name: init-storage
           image: busybox:1.35
@@ -108,7 +109,7 @@ spec:
         spec:
           # No securityContext - run as root to write to /var/www/public/manifest.json
           nodeSelector:
-            role: control-plane
+            node-role: control-plane
           tolerations:
             - key: "node-role.kubernetes.io/control-plane"
               operator: "Exists"
