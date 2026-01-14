@@ -13,6 +13,11 @@ spec:
       labels:
         app: stats-for-strava
     spec:
+      securityContext:          # ← ADD THIS BLOCK
+        runAsUser: 33
+        runAsGroup: 33
+        fsGroup: 33
+        fsGroupChangePolicy: OnRootMismatch
       containers:
         - name: statistics-for-strava
           image: robiningelbrecht/strava-statistics:latest
@@ -158,6 +163,11 @@ spec:
     spec:
       template:
         spec:
+          securityContext:         
+            runAsUser: 33
+            runAsGroup: 33
+            fsGroup: 33
+            fsGroupChangePolicy: OnRootMismatch
           restartPolicy: OnFailure
           containers:
             - name: daily-update
