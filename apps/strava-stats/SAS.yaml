@@ -39,10 +39,6 @@ spec:
                 secretKeyRef:
                   name: strava-credentials
                   key: refresh-token
-            - name: PROXY_HOST
-              value: "https://sfs.gunhildsbu.no"
-            - name: PROXY_PORT
-              value: "8080"
             - name: TZ
               value: "Etc/UTC"
           volumeMounts:
