@@ -19,6 +19,22 @@ spec:
         fsGroup: 1000
         fsGroupChangePolicy: OnRootMismatch
 
+      initContainers:
+        - name: init-permissions
+          image: busybox:1.35
+          securityContext:
+            runAsUser: 0
+          command:
+            - sh
+            - -c
+            - |
+              mkdir -p /data/storage /data/build
+              chown -R 1000:1000 /data
+              chmod -R 775 /data
+          volumeMounts:
+            - name: strava-pvc
+              mountPath: /data
+
       containers:
         - name: statistics-for-strava
           image: robiningelbrecht/strava-statistics:latest
@@ -94,6 +110,22 @@ spec:
             runAsGroup: 1000
             fsGroup: 1000
             fsGroupChangePolicy: OnRootMismatch
+
+          initContainers:
+            - name: init-permissions
+              image: busybox:1.35
+              securityContext:
+                runAsUser: 0
+              command:
+                - sh
+                - -c
+                - |
+                  mkdir -p /data/storage /data/build
+                  chown -R 1000:1000 /data
+                  chmod -R 775 /data
+              volumeMounts:
+                - name: strava-pvc
+                  mountPath: /data
 
           restartPolicy: OnFailure
 
