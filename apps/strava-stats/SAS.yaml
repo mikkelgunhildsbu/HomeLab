@@ -31,8 +31,6 @@ spec:
               mkdir -p /data/storage/database /data/storage/files /data/storage/gear-maintenance /data/build
               chown -R 1000:1000 /data
               chmod -R 775 /data
-              ls -la /data/
-              ls -la /data/storage/
           volumeMounts:
             - name: strava-pvc
               mountPath: /data
@@ -219,15 +217,17 @@ data:
       athlete:
         birthday: "2000-05-25"
         maxHeartRateFormula: fox
-      appearance:
-        locale: en_US
-        unitSystem: metric
-        timeFormat: 24
-        dateFormat:
-          short: d-m-y
-          normal: d-m-Y
-      import:
-        numberOfNewActivitiesToProcessPerImport: 100
+        weightHistory: []
+        ftpHistory: []
+    appearance:
+      locale: en_US
+      unitSystem: metric
+      timeFormat: 24
+      dateFormat:
+        short: d-m-y
+        normal: d-m-Y
+    import:
+      numberOfNewActivitiesToProcessPerImport: 100
 
 ---
 
