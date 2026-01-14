@@ -41,6 +41,8 @@ spec:
                   key: refresh-token
             - name: TZ
               value: "Etc/UTC"
+            - name: CADDY_LOG_LEVEL
+              value: "DEBUG"
           volumeMounts:
             - name: data
               mountPath: /var/www/storage
