@@ -13,16 +13,9 @@ spec:
       labels:
         app: stats-for-strava
     spec:
-      nodeSelector:
-        node-role: control-plane
-      securityContext:
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
-        fsGroupChangePolicy: OnRootMismatch
-
+      # No securityContext - run as root to write to /var/www/public/manifest.json
       initContainers:
-        - name: init-permissions
+        - name: init-storage
           image: busybox:1.35
           securityContext:
             runAsUser: 0
@@ -82,8 +75,6 @@ spec:
               subPath: build
             - name: cache-volume
               mountPath: /var/www/var/cache
-            - name: public-emptydir
-              mountPath: var/www/public
             - name: conf
               mountPath: /var/www/config/app
               readOnly: true
@@ -93,8 +84,6 @@ spec:
           persistentVolumeClaim:
             claimName: strava-data-pvc
         - name: cache-volume
-          emptyDir: {}
-        - name: public-emptydir
           emptyDir: {}
         - name: conf
           configMap:
@@ -117,30 +106,13 @@ spec:
     spec:
       template:
         spec:
+          # No securityContext - run as root to write to /var/www/public/manifest.json
           nodeSelector:
-            node-role: control-plane
-          securityContext:
-            runAsUser: 1000
-            runAsGroup: 1000
-            fsGroup: 1000
-            fsGroupChangePolicy: OnRootMismatch
-
-          initContainers:
-            - name: init-permissions
-              image: busybox:1.35
-              securityContext:
-                runAsUser: 0
-              command:
-                - sh
-                - -c
-                - |
-                  mkdir -p /data/storage/database /data/storage/files /data/storage/gear-maintenance /data/build
-                  chown -R 1000:1000 /data
-                  chmod -R 775 /data
-              volumeMounts:
-                - name: strava-pvc
-                  mountPath: /data
-
+            role: control-plane
+          tolerations:
+            - key: "node-role.kubernetes.io/control-plane"
+              operator: "Exists"
+              effect: "NoSchedule"
           restartPolicy: OnFailure
 
           containers:
@@ -176,7 +148,7 @@ spec:
                 - sh
                 - -c
                 - |
-                  bin/console app:strava:import-data && \
+                  bin/console app:strava:import-data
                   bin/console app:strava:build-files
               volumeMounts:
                 - name: strava-pvc
@@ -191,10 +163,6 @@ spec:
                 - name: strava-pvc
                   mountPath: /var/www/build
                   subPath: build
-                - name: cache-volume
-                  mountPath: /var/www/var/cache
-                - name: public-emptydir
-                  mountPath: var/www/public
                 - name: conf
                   mountPath: /var/www/config/app
                   readOnly: true
@@ -203,10 +171,6 @@ spec:
             - name: strava-pvc
               persistentVolumeClaim:
                 claimName: strava-data-pvc
-            - name: cache-volume
-              emptyDir: {}
-            - name: public-emptydir
-              emptyDir: {}
             - name: conf
               configMap:
                 name: strava-general-config
