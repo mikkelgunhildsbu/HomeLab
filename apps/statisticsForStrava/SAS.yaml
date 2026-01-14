@@ -1,0 +1,181 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stats-for-strava
+  namespace: strava-stats
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stats-for-strava
+  template:
+    metadata:
+      labels:
+        app: stats-for-strava
+    spec:
+      containers:
+        - name: statistics-for-strava
+          image: robiningelbrecht/strava-statistics:latest
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          ports:
+            - containerPort: 8080
+          env:
+            - name: STRAVA_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: strava-credentials
+                  key: client-id
+            - name: STRAVA_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: strava-credentials
+                  key: client-secret
+            - name: STRAVA_REFRESH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: strava-credentials
+                  key: refresh-token
+            - name: TZ
+              value: "Etc/UTC"
+          volumeMounts:
+            - name: data
+              mountPath: /var/www/storage
+            - name: data
+              mountPath: /var/www/build
+            - name: conf
+              mountPath: /var/www/config/app/general.yaml
+              subPath: general.yaml
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: strava-data-pvc
+        - name: conf
+          configMap:
+            name: strava-general-config
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: strava-data-pvc
+  namespace: strava-stats
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: strava-general-config
+  namespace: strava-stats
+data:
+  general.yaml: |
+    general:
+      appUrl: "https://sfs.gunhildsbu.no/"
+      appSubTitle: mikkel-stats
+      profilePictureUrl: https://dgalywyr863hv.cloudfront.net/pictures/athletes/101757310/24662245/2/large.jpg
+      athlete:
+        birthday: "2000-05-25"
+        maxHeartRateFormula: fox
+      appearance:
+        locale: en_US
+        unitSystem: metric
+        timeFormat: 24
+        dateFormat:
+          short: d-m-y
+          normal: d-m-Y
+      import:
+        numberOfNewActivitiesToProcessPerImport: 100
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: strava-service
+  namespace: strava-stats
+spec:
+  selector:
+    app: stats-for-strava
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: ClusterIP
+
+
+--- 
+
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-strava
+  namespace: strava-stats
+spec:
+  parentRefs:
+    - name: gateway
+      namespace: envoy
+  hostnames:
+    - sfs.gunhildsbu.no
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: strava-service
+      namespace: strava-stats
+      port: 80
+
+---
+
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: strava-import-cron
+  namespace: strava-stats
+spec:
+  schedule: "5 4 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: import
+              image: robiningelbrecht/strava-statistics:latest
+              envFrom:
+                - secretRef:
+                    name: strava-credentials
+              command:
+                - sh
+                - -c
+                - |
+                  bin/console app:strava:import-data && \
+                  bin/console app:strava:build-files
+              volumeMounts:
+                - name: data
+                  mountPath: /var/www/storage
+                - name: data
+                  mountPath: /var/www/build
+                - name: general-config
+                  mountPath: /var/www/config/app/general.yaml
+                  subPath: general.yaml             
+          volumes:
+            - name: data
+              persistentVolumeClaim:
+                claimName: strava-data-pvc
+            - name: general-config
+              configMap:
+                name: strava-general-config
+
