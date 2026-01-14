@@ -49,7 +49,7 @@ spec:
               subPath: storage
             - name: strava-pvc
               mountPath: /var/www/build
-              subPath: buil
+              subPath: build
             - name: conf
               mountPath: /var/www/config/app/config.yaml
               subPath: config.yaml
