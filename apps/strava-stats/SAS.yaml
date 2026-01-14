@@ -13,11 +13,17 @@ spec:
       labels:
         app: stats-for-strava
     spec:
-      securityContext:          # ← ADD THIS BLOCK
-        runAsUser: 33
-        runAsGroup: 33
-        fsGroup: 33
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
         fsGroupChangePolicy: OnRootMismatch
+
+      initContainers:
+        - name: fix-cache-permissions
+          image: busybox:1.35
+          command: ['sh', '-c', 'chown -R 1000:1000 /var/www/var/cache || true']
+
       containers:
         - name: statistics-for-strava
           image: robiningelbrecht/strava-statistics:latest
@@ -58,6 +64,7 @@ spec:
             - name: conf
               mountPath: /var/www/config/app/config.yaml
               subPath: config.yaml
+
       volumes:
         - name: strava-pvc
           persistentVolumeClaim:
@@ -65,6 +72,78 @@ spec:
         - name: conf
           configMap:
             name: strava-general-config
+
+---
+
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: strava-daily-update
+  namespace: strava-stats
+spec:
+  schedule: "15 4 * * *"               # 04:15 every day
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 2
+
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+            fsGroupChangePolicy: OnRootMismatch
+
+          initContainers:
+            - name: fix-cache-permissions
+              image: busybox:1.35
+              command: ['sh', '-c', 'chown -R 1000:1000 /var/www/var/cache || true']
+
+          restartPolicy: OnFailure
+
+          containers:
+            - name: daily-update
+              image: robiningelbrecht/strava-statistics:latest
+              imagePullPolicy: Always
+              resources:
+                requests:
+                  cpu: 300m
+                  memory: 512Mi
+                limits:
+                  cpu: 500m
+                  memory: 768Mi
+              envFrom:
+                - secretRef:
+                    name: strava-credentials
+              env:
+                - name: TZ
+                  value: "Europe/Oslo"
+              command:
+                - sh
+                - -c
+                - |
+                  bin/console app:strava:import-data && \
+                  bin/console app:strava:build-files
+              volumeMounts:
+                - name: strava-pvc
+                  mountPath: /var/www/storage
+                  subPath: storage
+                - name: strava-pvc
+                  mountPath: /var/www/build
+                  subPath: build
+                - name: conf
+                  mountPath: /var/www/config/app/config.yaml
+                  subPath: config.yaml
+
+          volumes:
+            - name: strava-pvc
+              persistentVolumeClaim:
+                claimName: strava-data-pvc
+            - name: conf
+              configMap:
+                name: strava-general-config
 ---
 
 apiVersion: v1
@@ -147,57 +226,3 @@ spec:
       port: 80
 
 ---
-
-apiVersion: batch/v1
-kind: CronJob
-metadata:
-  name: strava-daily-update
-  namespace: strava-stats
-spec:
-  schedule: "15 4 * * *"               # 04:15 every day
-  concurrencyPolicy: Forbid             # don't overlap
-  successfulJobsHistoryLimit: 3
-  failedJobsHistoryLimit: 2
-
-  jobTemplate:
-    spec:
-      template:
-        spec:
-          securityContext:         
-            runAsUser: 33
-            runAsGroup: 33
-            fsGroup: 33
-            fsGroupChangePolicy: OnRootMismatch
-          restartPolicy: OnFailure
-          containers:
-            - name: daily-update
-              image: robiningelbrecht/strava-statistics:latest
-              envFrom:
-                - secretRef:
-                    name: strava-credentials
-              env:
-                - name: TZ
-                  value: "Europe/Oslo"
-              command:
-                - sh
-                - -c
-                - |
-                  bin/console app:strava:import-data && \
-                  bin/console app:strava:build-files
-              volumeMounts:
-                - name: strava-pvc
-                  mountPath: /var/www/storage
-                  subPath: storage
-                - name: strava-pvc
-                  mountPath: /var/www/build
-                  subPath: build
-                - name: conf
-                  mountPath: /var/www/config/app/config.yaml
-                  subPath: config.yaml
-          volumes:
-            - name: strava-pvc
-              persistentVolumeClaim:
-                claimName: strava-data-pvc
-            - name: conf
-              configMap:
-                name: strava-general-config
