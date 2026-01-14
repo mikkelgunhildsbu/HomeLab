@@ -40,19 +40,22 @@ spec:
                   name: strava-credentials
                   key: refresh-token
             - name: TZ
-              value: "Etc/UTC"
+              value: "Europe/Oslo"
             - name: CADDY_LOG_LEVEL
               value: "DEBUG"
           volumeMounts:
             - name: data
               mountPath: /var/www/storage
-            - name: data
+            - name: build
               mountPath: /var/www/build
             - name: conf
               mountPath: /var/www/config/app/config.yaml
               subPath: config.yaml
       volumes:
         - name: data
+          persistentVolumeClaim:
+            claimName: strava-data-pvc
+        - name: build
           persistentVolumeClaim:
             claimName: strava-data-pvc
         - name: conf
@@ -144,21 +147,28 @@ spec:
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: strava-import-cron
+  name: strava-daily-update
   namespace: strava-stats
 spec:
-  schedule: "5 4 * * *"
+  schedule: "15 4 * * *"               # 04:15 every day
+  concurrencyPolicy: Forbid             # don't overlap
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 2
+
   jobTemplate:
     spec:
       template:
         spec:
           restartPolicy: OnFailure
           containers:
-            - name: import
+            - name: daily-update
               image: robiningelbrecht/strava-statistics:latest
               envFrom:
                 - secretRef:
                     name: strava-credentials
+              env:
+                - name: TZ
+                  value: "Europe/Oslo"
               command:
                 - sh
                 - -c
@@ -166,18 +176,20 @@ spec:
                   bin/console app:strava:import-data && \
                   bin/console app:strava:build-files
               volumeMounts:
-                - name: data
+                - name: storage
                   mountPath: /var/www/storage
-                - name: data
+                - name: build
                   mountPath: /var/www/build
-                - name: general-config
+                - name: conf
                   mountPath: /var/www/config/app/config.yaml
-                  subPath: config.yaml             
+                  subPath: config.yaml
           volumes:
-            - name: data
+            - name: storage
               persistentVolumeClaim:
                 claimName: strava-data-pvc
-            - name: general-config
+            - name: build
+              persistentVolumeClaim:
+                claimName: strava-data-pvc
+            - name: conf
               configMap:
                 name: strava-general-config
-
