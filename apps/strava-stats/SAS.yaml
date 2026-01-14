@@ -42,7 +42,7 @@ spec:
             - name: PROXY_HOST
               value: "https://sfs.gunhildsbu.no"
             - name: PROXY_PORT
-              value: 8080
+              value: "8080"
             - name: TZ
               value: "Etc/UTC"
           volumeMounts:
