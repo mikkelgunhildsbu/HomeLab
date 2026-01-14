@@ -44,18 +44,17 @@ spec:
             - name: CADDY_LOG_LEVEL
               value: "DEBUG"
           volumeMounts:
-            - name: data
+            - name: strava-pvc
               mountPath: /var/www/storage
-            - name: build
+              subPath: storage
+            - name: strava-pvc
               mountPath: /var/www/build
+              subPath: buil
             - name: conf
               mountPath: /var/www/config/app/config.yaml
               subPath: config.yaml
       volumes:
-        - name: data
-          persistentVolumeClaim:
-            claimName: strava-data-pvc
-        - name: build
+        - name: strava-pvc
           persistentVolumeClaim:
             claimName: strava-data-pvc
         - name: conf
@@ -176,18 +175,17 @@ spec:
                   bin/console app:strava:import-data && \
                   bin/console app:strava:build-files
               volumeMounts:
-                - name: storage
+                - name: strava-pvc
                   mountPath: /var/www/storage
-                - name: build
+                  subPath: storage
+                - name: strava-pvc
                   mountPath: /var/www/build
+                  subPath: build
                 - name: conf
                   mountPath: /var/www/config/app/config.yaml
                   subPath: config.yaml
           volumes:
-            - name: storage
-              persistentVolumeClaim:
-                claimName: strava-data-pvc
-            - name: build
+            - name: strava-pvc
               persistentVolumeClaim:
                 claimName: strava-data-pvc
             - name: conf
