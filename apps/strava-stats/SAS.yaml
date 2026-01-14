@@ -82,6 +82,8 @@ spec:
               subPath: build
             - name: cache-volume
               mountPath: /var/www/var/cache
+            - name: public-emptyDir
+              mountPath: var/www/public
             - name: conf
               mountPath: /var/www/config/app
               readOnly: true
@@ -91,6 +93,8 @@ spec:
           persistentVolumeClaim:
             claimName: strava-data-pvc
         - name: cache-volume
+          emptyDir: {}
+        - name: public-emptyDir
           emptyDir: {}
         - name: conf
           configMap:
@@ -189,6 +193,8 @@ spec:
                   subPath: build
                 - name: cache-volume
                   mountPath: /var/www/var/cache
+                - name: public-emptyDir
+                  mountPath: var/www/public
                 - name: conf
                   mountPath: /var/www/config/app
                   readOnly: true
@@ -198,6 +204,8 @@ spec:
               persistentVolumeClaim:
                 claimName: strava-data-pvc
             - name: cache-volume
+              emptyDir: {}
+            - name: public-emptyDir
               emptyDir: {}
             - name: conf
               configMap:
