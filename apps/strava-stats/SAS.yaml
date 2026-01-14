@@ -146,10 +146,22 @@ spec:
                 limits:
                   cpu: 500m
                   memory: 768Mi
-              envFrom:
-                - secretRef:
-                    name: strava-credentials
               env:
+                - name: STRAVA_CLIENT_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: strava-credentials
+                      key: client-id
+                - name: STRAVA_CLIENT_SECRET
+                  valueFrom:
+                    secretKeyRef:
+                      name: strava-credentials
+                      key: client-secret
+                - name: STRAVA_REFRESH_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: strava-credentials
+                      key: refresh-token
                 - name: TZ
                   value: "Europe/Oslo"
               command:
