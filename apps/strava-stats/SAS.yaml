@@ -47,8 +47,8 @@ spec:
             - name: data
               mountPath: /var/www/build
             - name: conf
-              mountPath: /var/www/config/app/general.yaml
-              subPath: general.yaml
+              mountPath: /var/www/config/app/config.yaml
+              subPath: config.yaml
       volumes:
         - name: data
           persistentVolumeClaim:
@@ -79,7 +79,7 @@ metadata:
   name: strava-general-config
   namespace: strava-stats
 data:
-  general.yaml: |
+  config.yaml: |
     general:
       appUrl: "https://sfs.gunhildsbu.no/"
       appSubTitle: mikkel-stats
@@ -169,8 +169,8 @@ spec:
                 - name: data
                   mountPath: /var/www/build
                 - name: general-config
-                  mountPath: /var/www/config/app/general.yaml
-                  subPath: general.yaml             
+                  mountPath: /var/www/config/app/config.yaml
+                  subPath: config.yaml             
           volumes:
             - name: data
               persistentVolumeClaim:
