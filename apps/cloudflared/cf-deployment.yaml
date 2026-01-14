@@ -5,8 +5,7 @@ metadata:
   namespace: cloudflared
 spec:
   replicas: 1
-  nodeSelector:
-        node-role: control-plane
+  
   selector:
     matchLabels:
       app: cloudflared
@@ -15,6 +14,8 @@ spec:
       labels:
         app: cloudflared
     spec:
+      nodeSelector:
+        node-role: control-plane
       containers:
         - name: cloudflared
           image: cloudflare/cloudflared:2025.11.1
