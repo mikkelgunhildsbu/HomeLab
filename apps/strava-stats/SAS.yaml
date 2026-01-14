@@ -19,11 +19,6 @@ spec:
         fsGroup: 1000
         fsGroupChangePolicy: OnRootMismatch
 
-      initContainers:
-        - name: fix-cache-permissions
-          image: busybox:1.35
-          command: ['sh', '-c', 'chown -R 1000:1000 /var/www/var/cache || true']
-
       containers:
         - name: statistics-for-strava
           image: robiningelbrecht/strava-statistics:latest
@@ -61,6 +56,8 @@ spec:
             - name: strava-pvc
               mountPath: /var/www/build
               subPath: build
+            - name: cache-volume
+              mountPath: /var/www/var/cache
             - name: conf
               mountPath: /var/www/config/app/config.yaml
               subPath: config.yaml
@@ -69,6 +66,8 @@ spec:
         - name: strava-pvc
           persistentVolumeClaim:
             claimName: strava-data-pvc
+        - name: cache-volume
+          emptyDir: {}
         - name: conf
           configMap:
             name: strava-general-config
@@ -95,11 +94,6 @@ spec:
             runAsGroup: 1000
             fsGroup: 1000
             fsGroupChangePolicy: OnRootMismatch
-
-          initContainers:
-            - name: fix-cache-permissions
-              image: busybox:1.35
-              command: ['sh', '-c', 'chown -R 1000:1000 /var/www/var/cache || true']
 
           restartPolicy: OnFailure
 
@@ -133,6 +127,8 @@ spec:
                 - name: strava-pvc
                   mountPath: /var/www/build
                   subPath: build
+                - name: cache-volume
+                  mountPath: /var/www/var/cache
                 - name: conf
                   mountPath: /var/www/config/app/config.yaml
                   subPath: config.yaml
@@ -141,9 +137,12 @@ spec:
             - name: strava-pvc
               persistentVolumeClaim:
                 claimName: strava-data-pvc
+            - name: cache-volume
+              emptyDir: {}
             - name: conf
               configMap:
                 name: strava-general-config
+
 ---
 
 apiVersion: v1
@@ -157,7 +156,6 @@ spec:
   resources:
     requests:
       storage: 2Gi
-
 
 ---
 
@@ -201,8 +199,7 @@ spec:
       targetPort: 8080
   type: ClusterIP
 
-
---- 
+---
 
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -216,13 +213,11 @@ spec:
   hostnames:
     - sfs.gunhildsbu.no
   rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: /
-    backendRefs:
-    - name: strava-service
-      namespace: strava-stats
-      port: 80
-
----
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: strava-service
+          namespace: strava-stats
+          port: 80
