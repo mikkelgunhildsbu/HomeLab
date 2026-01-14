@@ -13,6 +13,8 @@ spec:
       labels:
         app: stats-for-strava
     spec:
+      nodeSelector:
+        node-role: control-plane
       securityContext:
         runAsUser: 1000
         runAsGroup: 1000
@@ -111,6 +113,8 @@ spec:
     spec:
       template:
         spec:
+          nodeSelector:
+            node-role: control-plane
           securityContext:
             runAsUser: 1000
             runAsGroup: 1000
