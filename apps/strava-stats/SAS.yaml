@@ -206,7 +206,8 @@ data:
       athlete:
         birthday: '2000-05-25'
         maxHeartRateFormula:
-          "2025-01-01": 208
+          "2020-01-01": "195"
+          "2024-08-01": "208"
         heartRateZones:
           mode: relative
           default:
