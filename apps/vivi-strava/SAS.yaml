@@ -177,7 +177,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: vivi-strava-data-pvc
-  namespace: vivi-strava
+  namespace: vivi-strava-stats
 spec:
   accessModes:
     - ReadWriteOnce
@@ -195,7 +195,7 @@ metadata:
 data:
   config.yaml: |
     general:
-      appUrl: 'https:/vivi.gunhildsbu.no/'
+      appUrl: 'https://vivi.gunhildsbu.no/'
       appSubTitle: vivi-stats
       profilePictureUrl: https://dgalywyr863hv.cloudfront.net/pictures/athletes/101757310/24662245/2/large.jpg
       athlete:
