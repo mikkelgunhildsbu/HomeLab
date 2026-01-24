@@ -1,5 +1,0 @@
-gateway-helm:
-  deployment:
-    pod:
-      nodeSelector:
-        node-role: control-plane

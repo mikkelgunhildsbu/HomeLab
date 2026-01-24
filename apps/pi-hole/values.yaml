@@ -1,7 +1,6 @@
 pihole:
   replicaCount: 1
-  nodeSelector:
-    node-role: control-plane
+  
 
   persistentVolumeClaim:
     enabled: true
