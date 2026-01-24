@@ -1,0 +1,341 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vivi-strava
+  namespace: vivi-strava
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vivi-strava
+  template:
+    metadata:
+      labels:
+        app: vivi-strava
+    spec:
+      initContainers:
+        - name: init-storage
+          image: busybox:1.35
+          securityContext:
+            runAsUser: 0
+          command:
+            - sh
+            - -c
+            - |
+              mkdir -p /data/storage/database /data/storage/files /data/storage/gear-maintenance /data/build
+              chown -R 1000:1000 /data
+              chmod -R 775 /data
+          volumeMounts:
+            - name: vivi-strava-pvc
+              mountPath: /data
+
+      containers:
+        - name: vivi-strava
+          image: robiningelbrecht/strava-statistics:latest
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          ports:
+            - containerPort: 8080
+          env:
+            - name: STRAVA_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: strava-credentials
+                  key: client-id
+            - name: STRAVA_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: strava-credentials
+                  key: client-secret
+            - name: STRAVA_REFRESH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: strava-credentials
+                  key: refresh-token
+            - name: TZ
+              value: "Europe/Oslo"
+            - name: CADDY_LOG_LEVEL
+              value: "DEBUG"
+          volumeMounts:
+            - name: vivi-strava-pvc
+              mountPath: /var/www/storage/database
+              subPath: storage/database
+            - name: vivi-strava-pvc
+              mountPath: /var/www/storage/files
+              subPath: storage/files
+            - name: vivi-strava-pvc
+              mountPath: /var/www/storage/gear-maintenance
+              subPath: storage/gear-maintenance
+            - name: vivi-strava-pvc
+              mountPath: /var/www/build
+              subPath: build
+            - name: cache-volume
+              mountPath: /var/www/var/cache
+            - name: conf
+              mountPath: /var/www/config/app
+              readOnly: true
+
+      volumes:
+        - name: vivi-strava-pvc
+          persistentVolumeClaim:
+            claimName: vivi-strava-data-pvc
+        - name: cache-volume
+          emptyDir: {}
+        - name: conf
+          configMap:
+            name: strava-general-config
+
+---
+
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: vivi-strava-daily-update
+  namespace: vivi-strava
+spec:
+  schedule: "15 4 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 2
+
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          tolerations:
+            - key: "node-role.kubernetes.io/control-plane"
+              operator: "Exists"
+              effect: "NoSchedule"
+          restartPolicy: OnFailure
+
+          containers:
+            - name: daily-update
+              image: robiningelbrecht/strava-statistics:latest
+              imagePullPolicy: Always
+              resources:
+                requests:
+                  cpu: 300m
+                  memory: 512Mi
+                limits:
+                  cpu: 500m
+                  memory: 768Mi
+              env:
+                - name: STRAVA_CLIENT_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: strava-credentials
+                      key: client-id
+                - name: STRAVA_CLIENT_SECRET
+                  valueFrom:
+                    secretKeyRef:
+                      name: strava-credentials
+                      key: client-secret
+                - name: STRAVA_REFRESH_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: strava-credentials
+                      key: refresh-token
+                - name: TZ
+                  value: "Europe/Oslo"
+              command:
+                - sh
+                - -c
+                - |
+                  bin/console app:strava:import-data
+                  bin/console app:strava:build-files
+              volumeMounts:
+                - name: vivi-strava-pvc
+                  mountPath: /var/www/storage/database
+                  subPath: storage/database
+                - name: vivi-strava-pvc
+                  mountPath: /var/www/storage/files
+                  subPath: storage/files
+                - name: vivi-strava-pvc
+                  mountPath: /var/www/storage/gear-maintenance
+                  subPath: storage/gear-maintenance
+                - name: vivi-strava-pvc
+                  mountPath: /var/www/build
+                  subPath: build
+                - name: conf
+                  mountPath: /var/www/config/app
+                  readOnly: true
+
+          volumes:
+            - name: vivi-strava-pvc
+              persistentVolumeClaim:
+                claimName: vivi-strava-data-pvc
+            - name: conf
+              configMap:
+                name: strava-general-config
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vivi-strava-data-pvc
+  namespace: vivi-strava
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: strava-general-config
+  namespace: vivi-strava
+data:
+  config.yaml: |
+    general:
+      appUrl: 'https:/vivi.gunhildsbu.no/'
+      appSubTitle: vivi-stats
+      profilePictureUrl: https://dgalywyr863hv.cloudfront.net/pictures/athletes/101757310/24662245/2/large.jpg
+      athlete:
+        birthday: '1999-12-17'
+        maxHeartRateFormula:
+          "2020-01-01": 204
+        heartRateZones:
+          mode: relative
+          default:
+            zone1:
+              from: 55
+              to: 71
+            zone2:
+              from: 72
+              to: 81
+            zone3:
+              from: 82
+              to: 86
+            zone4:
+              from: 87
+              to: 91
+            zone5:
+              from: 92
+              to: null
+        weightHistory:
+          "2000-05-25": 53
+        ftpHistory:
+          cycling: []
+          running: []
+
+    appearance:
+      locale: 'en_US'
+      unitSystem: 'metric'
+      timeFormat: 24
+      dateFormat:
+        short: 'd-m-y'
+        normal: 'd-m-Y'
+      dashboard:
+        layout: null
+      heatmap:
+        polylineColor: '#fc6719'
+        tileLayerUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+        enableGreyScale: true
+      photos:
+        hidePhotosForSportTypes: []
+        defaultEnabledFilters:
+          sportTypes: []
+          countryCode: null
+      sportTypesSortingOrder: []
+
+    import:
+      numberOfNewActivitiesToProcessPerImport: 250
+      sportTypesToImport: []
+      activityVisibilitiesToImport: []
+      skipActivitiesRecordedBefore: null
+      activitiesToSkipDuringImport: []
+      optInToSegmentDetailImport: false
+
+    metrics:
+      eddington:
+        - label: 'Ride'
+          showInNavBar: true
+          showInDashboardWidget: true
+          sportTypesToInclude: ['Ride', 'MountainBikeRide', 'GravelRide', 'VirtualRide']
+        - label: 'Run'
+          showInNavBar: true
+          showInDashboardWidget: true
+          sportTypesToInclude: ['Run', 'TrailRun', 'VirtualRun']
+        - label: 'Walk'
+          showInNavBar: false
+          showInDashboardWidget: false
+          sportTypesToInclude: ['Walk', 'Hike']
+
+    gear:
+      stravaGear: []
+      customGear: []
+
+    zwift:
+      level: null
+      racingScore: null
+
+    integrations:
+      notifications:
+        services: []
+      ai:
+        enabled: false
+        enableUI: false
+        provider: 'openAI'
+        configuration:
+          key: ''
+          model: ''
+          url: ''
+
+    daemon:
+      cron:
+        - action: 'importDataAndBuildApp'
+          expression: '0 14 * * *'
+          enabled: false
+        - action: 'gearMaintenanceNotification'
+          expression: '0 14 * * *'
+          enabled: false
+        - action: 'appUpdateAvailableNotification'
+          expression: '0 14 * * *'
+          enabled: false
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: vivi-strava-service
+  namespace: vivi-strava
+spec:
+  selector:
+    app: vivi-strava
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: ClusterIP
+
+---
+
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: vivi-http-strava
+  namespace: vivi-strava
+spec:
+  parentRefs:
+    - name: gateway
+      namespace: envoy
+  hostnames:
+    - vivi.gunhildsbu.no
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: vivi-strava-service
+          namespace: vivi-strava
+          port: 80
