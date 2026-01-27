@@ -202,7 +202,7 @@ data:
         birthday: '2000-05-25'
         maxHeartRateFormula:
           "2020-01-01": 195
-          "2024-08-01": 208
+          "2025-08-01": 208
         heartRateZones:
           mode: relative
           default:
